@@ -131,6 +131,7 @@ jobs:
             -
                 name: Upload code coverage scrutinizer
                 if:   env.PHPUNIT_COVERAGE == 1
+                continue-on-error: true
                 run:  |
                       wget https://scrutinizer-ci.com/ocular.phar
                       php ocular.phar code-coverage:upload --format=php-clover coverage.clover
