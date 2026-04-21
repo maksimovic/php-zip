@@ -309,7 +309,6 @@ class ZipWriter
 
         if ($contextFilter !== null) {
             stream_filter_remove($contextFilter);
-            $contextFilter = null;
         }
 
         // my hack {@see https://bugs.php.net/bug.php?id=49874}

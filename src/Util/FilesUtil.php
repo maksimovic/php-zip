@@ -114,7 +114,7 @@ final class FilesUtil
                 case '}':
                     if ($inCurrent > 0 && !$escaping) {
                         $regexPattern .= ')';
-                        $inCurrent--;
+                        --$inCurrent;
                     } elseif ($escaping) {
                         $regexPattern = '\\}';
                     } else {
@@ -182,6 +182,7 @@ final class FilesUtil
      */
     public static function globFileSearch(string $globPattern, int $flags = 0, bool $recursive = true): array
     {
+        /** @psalm-suppress ArgumentTypeCoercion glob flags are a bitmask of GLOB_* constants — psalm stubs are over-strict */
         $files = glob($globPattern, $flags);
 
         if (!$recursive) {

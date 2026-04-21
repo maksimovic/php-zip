@@ -234,7 +234,7 @@ final class NtfsExtraField implements ZipExtraField
      */
     public static function timestampToNtfsTime(float $timestamp): int
     {
-        return (int) (($timestamp * 10000000) - self::EPOCH_OFFSET);
+        return (int) (($timestamp * 10000000.0) - (float) self::EPOCH_OFFSET);
     }
 
     public static function dateTimeToNtfsTime(\DateTimeInterface $dateTime): int
@@ -247,7 +247,7 @@ final class NtfsExtraField implements ZipExtraField
      */
     public static function ntfsTimeToTimestamp(int $ntfsTime): float
     {
-        return (float) (($ntfsTime + self::EPOCH_OFFSET) / 10000000);
+        return (float) ($ntfsTime + self::EPOCH_OFFSET) / 10000000.0;
     }
 
     public static function ntfsTimeToDateTime(int $ntfsTime): \DateTimeInterface
@@ -256,7 +256,7 @@ final class NtfsExtraField implements ZipExtraField
         $dateTime = \DateTimeImmutable::createFromFormat('U.u', sprintf('%.6f', $timestamp));
 
         if ($dateTime === false) {
-            throw new InvalidArgumentException('Cannot create date/time object for timestamp ' . $timestamp);
+            throw new InvalidArgumentException('Cannot create date/time object for timestamp ' . (string) $timestamp);
         }
 
         return $dateTime;

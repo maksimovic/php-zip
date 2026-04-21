@@ -102,7 +102,7 @@ class ResponseStream implements StreamInterface
         }
         $meta = stream_get_meta_data($this->stream);
 
-        return $meta[$key] ?? null;
+        return $key === null ? $meta : ($meta[$key] ?? null);
     }
 
     /**

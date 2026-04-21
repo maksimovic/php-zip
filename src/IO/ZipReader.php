@@ -670,6 +670,7 @@ class ZipReader
      */
     protected function handleExtraFields(ZipEntry $zipEntry): void
     {
+        unset($zipEntry);
     }
 
     /**
@@ -764,7 +765,6 @@ class ZipReader
         rewind($this->inStream);
         fseek($this->inStream, $pos);
 
-        $contextDecompress = null;
         switch ($compressionMethod) {
             case ZipCompressionMethod::STORED:
                 // file without compression, do nothing

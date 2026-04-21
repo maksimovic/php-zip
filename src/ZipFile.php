@@ -45,6 +45,9 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  * Implemented support ZIP64.
  *
  * @see https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT .ZIP File Format Specification
+ *
+ * @template-implements \ArrayAccess<string, string>
+ * @template-implements \Iterator<string, ?string>
  */
 class ZipFile implements \Countable, \ArrayAccess, \Iterator
 {

@@ -315,10 +315,13 @@ class PKCryptContext
     public function checkHeader(string $header, int $checkByte): void
     {
         $byte = 0;
+        $unpacked = unpack('C*', $header);
 
-        foreach (unpack('C*', $header) as $byte) {
-            $byte = ($byte ^ $this->decryptByte()) & 0xFF;
-            $this->updateKeys($byte);
+        if (is_array($unpacked)) {
+            foreach ($unpacked as $byte) {
+                $byte = ($byte ^ $this->decryptByte()) & 0xFF;
+                $this->updateKeys($byte);
+            }
         }
 
         if ($byte !== $checkByte) {

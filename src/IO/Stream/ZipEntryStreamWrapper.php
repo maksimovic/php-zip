@@ -102,6 +102,8 @@ final class ZipEntryStreamWrapper
      */
     public function stream_open(string $path, string $mode, int $options, ?string &$opened_path): bool
     {
+        unset($path, $mode, $options, $opened_path);
+
         if ($this->context === null) {
             throw new \RuntimeException('stream context is null');
         }
@@ -292,6 +294,8 @@ final class ZipEntryStreamWrapper
      */
     public function stream_cast(int $cast_as)
     {
+        unset($cast_as);
+
         return $this->fp;
     }
 

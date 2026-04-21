@@ -15,6 +15,8 @@ use PhpZip\Util\StringUtil;
 
 /**
  * Recursive iterator for ignore files.
+ *
+ * @template-extends \RecursiveFilterIterator<array-key, mixed, \RecursiveIterator<array-key, mixed>>
  */
 class IgnoreFilesRecursiveFilterIterator extends \RecursiveFilterIterator
 {

@@ -340,7 +340,7 @@ final class WinZipAesExtraField implements ZipExtraField
 
     public function getSaltSize(): int
     {
-        return (int) ($this->getEncryptionStrength() / 8 / 2);
+        return intdiv($this->getEncryptionStrength(), 16);
     }
 
     public function __toString(): string

@@ -47,6 +47,7 @@ final class ZipExtraDriver
         Zip64ExtraField::HEADER_ID => Zip64ExtraField::class,
     ];
 
+    /** @psalm-suppress UnusedConstructor intentionally-private to prevent instantiation */
     private function __construct()
     {
     }
@@ -65,7 +66,11 @@ final class ZipExtraDriver
                 )
             );
         }
-        self::$implementations[\call_user_func([$extraField, 'getHeaderId'])] = $extraField;
+        /** @var int $headerId */
+        $headerId = \call_user_func([$extraField, 'getHeaderId']);
+        /** @var class-string<ZipExtraField> $className */
+        $className = \is_object($extraField) ? \get_class($extraField) : $extraField;
+        self::$implementations[$headerId] = $className;
     }
 
     /**
@@ -73,8 +78,6 @@ final class ZipExtraDriver
      */
     public static function unregister($extraType): bool
     {
-        $headerId = null;
-
         if (\is_int($extraType)) {
             $headerId = $extraType;
         } elseif (is_a($extraType, ZipExtraField::class, true)) {
