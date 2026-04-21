@@ -23,13 +23,17 @@ use PhpZip\Exception\ZipException;
 final class PackUtil
 {
     /**
+     * Callers in this library only ever use int-producing unpack formats
+     * (`C`, `V`, `v`, `P`, `c`), so the declared element type is narrowed
+     * to `int` for convenience at call sites.
+     *
      * @throws ZipException if unpack cannot produce a result for this format/buffer
      *
-     * @return array<array-key, int|string>
+     * @return array<array-key, int>
      */
     public static function unpackOrFail(string $format, string $buffer): array
     {
-        /** @var array<array-key, int|string>|false $result */
+        /** @var array<array-key, int>|false $result */
         $result = unpack($format, $buffer);
 
         if ($result === false) {
@@ -64,6 +68,38 @@ final class PackUtil
 
         if ($result === false) {
             throw new ZipException(sprintf('Failed to slice buffer at offset %d', $offset));
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param resource $stream
+     *
+     * @throws ZipException on read failure
+     */
+    public static function freadOrFail($stream, int $length): string
+    {
+        $result = fread($stream, $length);
+
+        if ($result === false) {
+            throw new ZipException(sprintf('Failed to read %d bytes from stream', $length));
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param resource $stream
+     *
+     * @throws ZipException on ftell failure
+     */
+    public static function ftellOrFail($stream): int
+    {
+        $result = ftell($stream);
+
+        if ($result === false) {
+            throw new ZipException('Failed to read stream position (ftell)');
         }
 
         return $result;

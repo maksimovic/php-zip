@@ -13,7 +13,9 @@ namespace PhpZip\IO\Filter\Cipher\WinZipAes;
 
 use PhpZip\Exception\RuntimeException;
 use PhpZip\Exception\ZipAuthenticationException;
+use PhpZip\Exception\ZipException;
 use PhpZip\Util\CryptoUtil;
+use PhpZip\Util\PackUtil;
 
 /**
  * WinZip Aes Encryption.
@@ -48,6 +50,9 @@ class WinZipAesContext
 
     private string $passwordVerifier;
 
+    /**
+     * @throws ZipException if the derived key material cannot be sliced cleanly
+     */
     public function __construct(int $encryptionStrengthBits, string $password, string $salt)
     {
         if ($password === '') {
@@ -59,10 +64,10 @@ class WinZipAesContext
         }
 
         // WinZip 99-character limit https://sourceforge.net/p/p7zip/discussion/383044/thread/c859a2f0/
-        $password = substr($password, 0, 99);
+        $password = PackUtil::substrOrFail($password, 0, 99);
 
         $this->iv = str_repeat("\0", self::IV_SIZE);
-        $keyStrengthBytes = (int) ($encryptionStrengthBits / 8);
+        $keyStrengthBytes = intdiv($encryptionStrengthBits, 8);
         $hashLength = $keyStrengthBytes * 2 + self::PASSWORD_VERIFIER_SIZE * 8;
 
         $hash = hash_pbkdf2(
@@ -74,10 +79,15 @@ class WinZipAesContext
             true
         );
 
-        $this->key = substr($hash, 0, $keyStrengthBytes);
-        $sha1Mac = substr($hash, $keyStrengthBytes, $keyStrengthBytes);
-        $this->hmacContext = hash_init('sha1', \HASH_HMAC, $sha1Mac);
-        $this->passwordVerifier = substr($hash, 2 * $keyStrengthBytes, self::PASSWORD_VERIFIER_SIZE);
+        $this->key = PackUtil::substrOrFail($hash, 0, $keyStrengthBytes);
+        $sha1Mac = PackUtil::substrOrFail($hash, $keyStrengthBytes, $keyStrengthBytes);
+        $hmacContext = hash_init('sha1', \HASH_HMAC, $sha1Mac);
+
+        if ($hmacContext === false) {
+            throw new ZipException('Unable to init sha1 HMAC context');
+        }
+        $this->hmacContext = $hmacContext;
+        $this->passwordVerifier = PackUtil::substrOrFail($hash, 2 * $keyStrengthBytes, self::PASSWORD_VERIFIER_SIZE);
     }
 
     public function getPasswordVerifier(): string
@@ -132,7 +142,7 @@ class WinZipAesContext
 
     public function getHmac(): string
     {
-        return substr(
+        return PackUtil::substrOrFail(
             hash_final($this->hmacContext, true),
             0,
             self::FOOTER_SIZE

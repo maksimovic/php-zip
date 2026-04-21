@@ -196,9 +196,11 @@ class ExtraFieldsCollection implements \ArrayAccess, \Countable, \Iterator
      *
      * @see http://php.net/manual/en/iterator.current.php
      */
-    public function current(): ZipExtraField
+    public function current(): ?ZipExtraField
     {
-        return current($this->collection);
+        $current = current($this->collection);
+
+        return $current === false ? null : $current;
     }
 
     /**

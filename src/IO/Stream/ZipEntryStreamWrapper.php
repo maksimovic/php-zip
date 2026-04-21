@@ -221,7 +221,9 @@ final class ZipEntryStreamWrapper
      */
     public function stream_stat(): array
     {
-        return fstat($this->fp);
+        $stat = fstat($this->fp);
+
+        return $stat === false ? [] : $stat;
     }
 
     /**

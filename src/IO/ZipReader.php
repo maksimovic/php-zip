@@ -33,6 +33,7 @@ use PhpZip\Model\Extra\ZipExtraDriver;
 use PhpZip\Model\Extra\ZipExtraField;
 use PhpZip\Model\ImmutableZipContainer;
 use PhpZip\Model\ZipEntry;
+use PhpZip\Util\PackUtil;
 
 /**
  * Zip reader.
@@ -89,7 +90,12 @@ class ZipReader
         if (!$seekable) {
             throw new InvalidArgumentException('Resource does not support seekable.');
         }
-        $this->size = fstat($inStream)['size'];
+        $stat = fstat($inStream);
+
+        if ($stat === false) {
+            throw new InvalidArgumentException('Unable to fstat input stream');
+        }
+        $this->size = $stat['size'];
         $this->inStream = $inStream;
 
         /** @noinspection AdditionOperationOnArraysInspection */
@@ -150,9 +156,9 @@ class ZipReader
             throw new ZipException('Invalid zip file. The end of the central directory could not be found.');
         }
 
-        $positionECD = ftell($this->inStream) - 4;
-        $sizeECD = $this->size - ftell($this->inStream);
-        $buffer = fread($this->inStream, $sizeECD);
+        $positionECD = PackUtil::ftellOrFail($this->inStream) - 4;
+        $sizeECD = $this->size - PackUtil::ftellOrFail($this->inStream);
+        $buffer = PackUtil::freadOrFail($this->inStream, $sizeECD);
 
         [
             'diskNo' => $diskNo,
@@ -162,10 +168,10 @@ class ZipReader
             'cdSize' => $cdSize,
             'cdPos' => $cdPos,
             'commentLength' => $commentLength,
-        ] = unpack(
+        ] = PackUtil::unpackOrFail(
             'vdiskNo/vcdDiskNo/vcdEntriesDisk/'
             . 'vcdEntries/VcdSize/VcdPos/vcommentLength',
-            substr($buffer, 0, 18)
+            PackUtil::substrOrFail($buffer, 0, 18)
         );
 
         if (
@@ -181,7 +187,7 @@ class ZipReader
 
         if ($commentLength > 0) {
             // .ZIP file comment       (variable sizeECD)
-            $comment = substr($buffer, 18, $commentLength);
+            $comment = PackUtil::substrOrFail($buffer, 18, $commentLength);
         }
 
         // Check for ZIP64 End Of Central Directory Locator exists.
@@ -191,7 +197,7 @@ class ZipReader
         // signature                       4 bytes  (0x07064b50)
         if (
             $zip64ECDLocatorPosition > 0
-            && unpack('V', fread($this->inStream, 4))[1] === ZipConstants::ZIP64_END_CD_LOC
+            && PackUtil::unpackOrFail('V', PackUtil::freadOrFail($this->inStream, 4))[1] === ZipConstants::ZIP64_END_CD_LOC
         ) {
             if (!$this->isZip64Support()) {
                 throw new ZipException('ZIP64 not supported this archive.');
@@ -221,7 +227,7 @@ class ZipReader
         for ($position = $max; $position >= $min; $position--) {
             fseek($this->inStream, $position);
             // end of central dir signature    4 bytes  (0x06054b50)
-            if (unpack('V', fread($this->inStream, 4))[1] !== ZipConstants::END_CD) {
+            if (PackUtil::unpackOrFail('V', PackUtil::freadOrFail($this->inStream, 4))[1] !== ZipConstants::END_CD) {
                 continue;
             }
 
@@ -252,7 +258,7 @@ class ZipReader
             'diskNo' => $diskNo,
             'zip64ECDPos' => $zip64ECDPos,
             'totalDisks' => $totalDisks,
-        ] = unpack('VdiskNo/Pzip64ECDPos/VtotalDisks', fread($this->inStream, 16));
+        ] = PackUtil::unpackOrFail('VdiskNo/Pzip64ECDPos/VtotalDisks', PackUtil::freadOrFail($this->inStream, 16));
 
         if ($diskNo !== 0 || $totalDisks > 1) {
             throw new ZipException('ZIP file spanning/splitting is not supported!');
@@ -290,9 +296,9 @@ class ZipReader
     {
         fseek($this->inStream, $zip64ECDPosition);
 
-        $buffer = fread($this->inStream, ZipConstants::ZIP64_END_OF_CD_LEN);
+        $buffer = PackUtil::freadOrFail($this->inStream, ZipConstants::ZIP64_END_OF_CD_LEN);
 
-        if (unpack('V', $buffer)[1] !== ZipConstants::ZIP64_END_CD) {
+        if (PackUtil::unpackOrFail('V', $buffer)[1] !== ZipConstants::ZIP64_END_CD) {
             throw new ZipException('Expected ZIP64 End Of Central Directory Record!');
         }
 
@@ -306,10 +312,10 @@ class ZipReader
             'entryCount' => $entryCount,
             'cdSize' => $cdSize,
             'cdPos' => $cdPos,
-        ] = unpack(
+        ] = PackUtil::unpackOrFail(
 //            'Psize/vversionMadeBy/vextractVersion/'.
             'VdiskNo/VcdDiskNo/PcdEntriesDisk/PentryCount/PcdSize/PcdPos',
-            substr($buffer, 16, 40)
+            PackUtil::substrOrFail($buffer, 16, 40)
         );
 
 //        $platform = ZipPlatform::fromValue(($versionMadeBy & 0xFF00) >> 8);
@@ -416,7 +422,7 @@ class ZipReader
      */
     protected function readZipEntry($stream): ZipEntry
     {
-        if (unpack('V', fread($stream, 4))[1] !== ZipConstants::CENTRAL_FILE_HEADER) {
+        if (PackUtil::unpackOrFail('V', PackUtil::freadOrFail($stream, 4))[1] !== ZipConstants::CENTRAL_FILE_HEADER) {
             throw new ZipException('Corrupt zip file. Cannot read zip entry.');
         }
 
@@ -436,14 +442,14 @@ class ZipReader
             'internalFileAttributes' => $internalFileAttributes,
             'externalFileAttributes' => $externalFileAttributes,
             'offsetLocalHeader' => $offsetLocalHeader,
-        ] = unpack(
+        ] = PackUtil::unpackOrFail(
             'vversionMadeBy/vversionNeededToExtract/'
             . 'vgeneralPurposeBitFlags/vcompressionMethod/'
             . 'VlastModFile/Vcrc/VcompressedSize/'
             . 'VuncompressedSize/vfileNameLength/vextraFieldLength/'
             . 'vfileCommentLength/vdiskNumberStart/vinternalFileAttributes/'
             . 'VexternalFileAttributes/VoffsetLocalHeader',
-            fread($stream, 42)
+            PackUtil::freadOrFail($stream, 42)
         );
 
         if ($diskNumberStart !== 0) {
@@ -452,7 +458,7 @@ class ZipReader
 
         $isUtf8 = ($generalPurposeBitFlags & GeneralPurposeBitFlag::UTF8) !== 0;
 
-        $name = fread($stream, $fileNameLength);
+        $name = PackUtil::freadOrFail($stream, $fileNameLength);
 
         $createdOS = ($versionMadeBy & 0xFF00) >> 8;
         $softwareVersion = $versionMadeBy & 0x00FF;
@@ -462,7 +468,7 @@ class ZipReader
         $comment = null;
 
         if ($fileCommentLength > 0) {
-            $comment = fread($stream, $fileCommentLength);
+            $comment = PackUtil::freadOrFail($stream, $fileCommentLength);
         }
 
         // decode code page names
@@ -500,7 +506,7 @@ class ZipReader
 
         if ($extraFieldLength > 0) {
             $this->parseExtraFields(
-                fread($stream, $extraFieldLength),
+                PackUtil::freadOrFail($stream, $extraFieldLength),
                 $zipEntry
             );
 
@@ -533,13 +539,13 @@ class ZipReader
                 [
                     'headerId' => $headerId,
                     'dataSize' => $dataSize,
-                ] = unpack('vheaderId/vdataSize', substr($buffer, $pos, 4));
+                ] = PackUtil::unpackOrFail('vheaderId/vdataSize', PackUtil::substrOrFail($buffer, $pos, 4));
                 $pos += 4;
 
                 if ($endPos - $pos - $dataSize < 0) {
                     break;
                 }
-                $bufferData = substr($buffer, $pos, $dataSize);
+                $bufferData = PackUtil::substrOrFail($buffer, $pos, $dataSize);
 
                 /** @var string|ZipExtraField|null $className */
                 $className = ZipExtraDriver::getClassNameOrNull($headerId);
@@ -611,7 +617,7 @@ class ZipReader
 
         fseek($this->inStream, $offsetLocalHeader);
 
-        if (unpack('V', fread($this->inStream, 4))[1] !== ZipConstants::LOCAL_FILE_HEADER) {
+        if (PackUtil::unpackOrFail('V', PackUtil::freadOrFail($this->inStream, 4))[1] !== ZipConstants::LOCAL_FILE_HEADER) {
             throw new ZipException(sprintf('%s (expected Local File Header)', $entry->getName()));
         }
 
@@ -619,13 +625,13 @@ class ZipReader
         [
             'fileNameLength' => $fileNameLength,
             'extraFieldLength' => $extraFieldLength,
-        ] = unpack('vfileNameLength/vextraFieldLength', fread($this->inStream, 4));
-        $offsetData = ftell($this->inStream) + $fileNameLength + $extraFieldLength;
+        ] = PackUtil::unpackOrFail('vfileNameLength/vextraFieldLength', PackUtil::freadOrFail($this->inStream, 4));
+        $offsetData = PackUtil::ftellOrFail($this->inStream) + $fileNameLength + $extraFieldLength;
         fseek($this->inStream, $fileNameLength, \SEEK_CUR);
 
         if ($extraFieldLength > 0) {
             $this->parseExtraFields(
-                fread($this->inStream, $extraFieldLength),
+                PackUtil::freadOrFail($this->inStream, $extraFieldLength),
                 $entry,
                 true
             );
@@ -646,13 +652,13 @@ class ZipReader
                 $extraField = $zipEntry->getExtraField(WinZipAesExtraField::HEADER_ID);
 
                 if ($extraField === null) {
-                    throw new ZipException(
-                        sprintf(
-                            'Extra field 0x%04x (WinZip-AES Encryption) expected for compression method %d',
-                            WinZipAesExtraField::HEADER_ID,
-                            $zipEntry->getCompressionMethod()
-                        )
+                    $msg = sprintf(
+                        'Extra field 0x%04x (WinZip-AES Encryption) expected for compression method %d',
+                        WinZipAesExtraField::HEADER_ID,
+                        $zipEntry->getCompressionMethod()
                     );
+
+                    throw new ZipException($msg === false ? 'WinZip-AES extra field expected' : $msg);
                 }
                 $zipEntry->setCompressionMethod($extraField->getCompressionMethod());
                 $zipEntry->setEncryptionMethod($extraField->getEncryptionMethod());
@@ -682,6 +688,10 @@ class ZipReader
     public function getEntryStream(ZipSourceFileData $zipFileData)
     {
         $outStream = fopen('php://temp', 'w+b');
+
+        if ($outStream === false) {
+            throw new ZipException('Unable to open a temporary stream for extracted entry data');
+        }
         $this->copyUncompressedDataToStream($zipFileData, $outStream);
         rewind($outStream);
 
@@ -761,7 +771,7 @@ class ZipReader
         }
 
         // hack, see https://groups.google.com/forum/#!topic/alt.comp.lang.php/37_JZeW63uc
-        $pos = ftell($this->inStream);
+        $pos = PackUtil::ftellOrFail($this->inStream);
         rewind($this->inStream);
         fseek($this->inStream, $pos);
 
@@ -824,6 +834,10 @@ class ZipReader
                 }
             } else {
                 $contextHash = hash_init('crc32b');
+
+                if ($contextHash === false) {
+                    throw new ZipException('Unable to init crc32b hash context');
+                }
 
                 while ($offset < $limit) {
                     $length = min($chunkSize, $limit - $offset);

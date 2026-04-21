@@ -14,6 +14,7 @@ namespace PhpZip\Model\Extra\Fields;
 use PhpZip\Exception\ZipException;
 use PhpZip\Model\Extra\ZipExtraField;
 use PhpZip\Model\ZipEntry;
+use PhpZip\Util\PackUtil;
 
 /**
  * A common base class for Unicode extra information extra fields.
@@ -78,13 +79,13 @@ abstract class AbstractUnicodeExtraField implements ZipExtraField
         [
             'version' => $version,
             'crc32' => $crc32,
-        ] = unpack('Cversion/Vcrc32', $buffer);
+        ] = PackUtil::unpackOrFail('Cversion/Vcrc32', $buffer);
 
         if ($version !== self::DEFAULT_VERSION) {
             throw new ZipException(sprintf('Unsupported version [%d] for Unicode path extra data.', $version));
         }
 
-        $unicodeValue = substr($buffer, 5);
+        $unicodeValue = PackUtil::substrOrFail($buffer, 5);
 
         return new static($crc32, $unicodeValue);
     }
@@ -112,7 +113,7 @@ abstract class AbstractUnicodeExtraField implements ZipExtraField
      */
     public function packLocalFileData(): string
     {
-        return pack(
+        return PackUtil::packOrFail(
             'CV',
             self::DEFAULT_VERSION,
             $this->crc32

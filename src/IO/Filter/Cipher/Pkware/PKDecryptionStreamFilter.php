@@ -13,6 +13,7 @@ namespace PhpZip\IO\Filter\Cipher\Pkware;
 
 use PhpZip\Exception\ZipAuthenticationException;
 use PhpZip\Model\ZipEntry;
+use PhpZip\Util\PackUtil;
 
 /**
  * Decryption PKWARE Traditional Encryption.
@@ -94,14 +95,14 @@ class PKDecryptionStreamFilter extends \php_user_filter
             $this->readLength += $bucket->datalen;
 
             if ($this->readLength > $this->size) {
-                $buffer = substr($buffer, 0, $this->size - $this->readLength);
+                $buffer = PackUtil::substrOrFail($buffer, 0, $this->size - $this->readLength);
             }
 
             if (!$this->readHeader) {
-                $header = substr($buffer, 0, PKCryptContext::STD_DEC_HDR_SIZE);
+                $header = PackUtil::substrOrFail($buffer, 0, PKCryptContext::STD_DEC_HDR_SIZE);
                 $this->context->checkHeader($header, $this->checkByte);
 
-                $buffer = substr($buffer, PKCryptContext::STD_DEC_HDR_SIZE);
+                $buffer = PackUtil::substrOrFail($buffer, PKCryptContext::STD_DEC_HDR_SIZE);
                 $this->readHeader = true;
             }
 

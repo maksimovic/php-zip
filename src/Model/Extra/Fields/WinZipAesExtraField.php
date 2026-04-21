@@ -18,6 +18,7 @@ use PhpZip\Exception\ZipException;
 use PhpZip\Exception\ZipUnsupportMethodException;
 use PhpZip\Model\Extra\ZipExtraField;
 use PhpZip\Model\ZipEntry;
+use PhpZip\Util\PackUtil;
 
 /**
  * WinZip AES Extra Field.
@@ -178,7 +179,7 @@ final class WinZipAesExtraField implements ZipExtraField
             'vendorId' => $vendorId,
             'keyStrength' => $keyStrength,
             'compressionMethod' => $compressionMethod,
-        ] = unpack('vvendorVersion/vvendorId/ckeyStrength/vcompressionMethod', $buffer);
+        ] = PackUtil::unpackOrFail('vvendorVersion/vvendorId/ckeyStrength/vcompressionMethod', $buffer);
 
         if ($vendorId !== self::VENDOR_ID) {
             throw new ZipException(
@@ -216,7 +217,7 @@ final class WinZipAesExtraField implements ZipExtraField
      */
     public function packLocalFileData(): string
     {
-        return pack(
+        return PackUtil::packOrFail(
             'vvcv',
             $this->vendorVersion,
             self::VENDOR_ID,
@@ -345,12 +346,14 @@ final class WinZipAesExtraField implements ZipExtraField
 
     public function __toString(): string
     {
-        return sprintf(
+        $formatted = sprintf(
             '0x%04x WINZIP AES: VendorVersion=%d KeyStrength=0x%02x CompressionMethod=%s',
             __CLASS__,
             $this->vendorVersion,
             $this->keyStrength,
             $this->compressionMethod
         );
+
+        return $formatted === false ? '' : $formatted;
     }
 }

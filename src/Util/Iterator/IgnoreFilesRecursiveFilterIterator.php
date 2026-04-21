@@ -48,7 +48,7 @@ class IgnoreFilesRecursiveFilterIterator extends \RecursiveFilterIterator
             // handler dir and sub dir
             if ($fileInfo->isDir()
                 && $ignoreFile[\strlen($ignoreFile) - 1] === '/'
-                && StringUtil::endsWith($pathname, substr($ignoreFile, 0, -1))
+                && StringUtil::endsWith($pathname, (string) substr($ignoreFile, 0, -1))
             ) {
                 return false;
             }

@@ -13,8 +13,10 @@ namespace PhpZip\IO\Filter\Cipher\WinZipAes;
 
 use PhpZip\Exception\RuntimeException;
 use PhpZip\Exception\ZipAuthenticationException;
+use PhpZip\Exception\ZipException;
 use PhpZip\Model\Extra\Fields\WinZipAesExtraField;
 use PhpZip\Model\ZipEntry;
+use PhpZip\Util\PackUtil;
 
 /**
  * Decrypt WinZip AES stream.
@@ -86,7 +88,7 @@ class WinZipAesDecryptionStreamFilter extends \php_user_filter
             $this->readLength += $bucket->datalen;
 
             if ($this->readLength > $this->entry->getCompressedSize()) {
-                $this->buffer = substr($this->buffer, 0, $this->entry->getCompressedSize() - $this->readLength);
+                $this->buffer = PackUtil::substrOrFail($this->buffer, 0, $this->entry->getCompressedSize() - $this->readLength);
             }
 
             // read header
@@ -106,8 +108,8 @@ class WinZipAesDecryptionStreamFilter extends \php_user_filter
                     return \PSFS_FEED_ME;
                 }
 
-                $salt = substr($this->buffer, 0, $saltSize);
-                $passwordVerifier = substr($this->buffer, $saltSize, WinZipAesContext::PASSWORD_VERIFIER_SIZE);
+                $salt = PackUtil::substrOrFail($this->buffer, 0, $saltSize);
+                $passwordVerifier = PackUtil::substrOrFail($this->buffer, $saltSize, WinZipAesContext::PASSWORD_VERIFIER_SIZE);
                 $password = $this->entry->getPassword();
 
                 if ($password === null) {
@@ -124,7 +126,7 @@ class WinZipAesDecryptionStreamFilter extends \php_user_filter
                 $this->encBlockPosition = 0;
                 $this->encBlockLength = $this->entry->getCompressedSize() - $headerSize - WinZipAesContext::FOOTER_SIZE;
 
-                $this->buffer = substr($this->buffer, $headerSize);
+                $this->buffer = PackUtil::substrOrFail($this->buffer, $headerSize);
             }
 
             // encrypt data
@@ -145,10 +147,10 @@ class WinZipAesDecryptionStreamFilter extends \php_user_filter
             while ($offset < $limit) {
                 $this->context->updateIv();
                 $length = min(WinZipAesContext::BLOCK_SIZE, $limit - $offset);
-                $data = substr($this->buffer, 0, $length);
+                $data = PackUtil::substrOrFail($this->buffer, 0, $length);
                 $plainText .= $this->context->decryption($data);
                 $offset += $length;
-                $this->buffer = substr($this->buffer, $length);
+                $this->buffer = PackUtil::substrOrFail($this->buffer, $length);
             }
             $this->encBlockPosition += $offset;
 

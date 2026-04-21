@@ -104,7 +104,7 @@ class PKEncryptionStreamFilter extends \php_user_filter
             $this->writeLength += $bucket->datalen;
 
             if ($this->writeLength > $this->size) {
-                $buffer = substr($buffer, 0, $this->size - $this->writeLength);
+                $buffer = \PhpZip\Util\PackUtil::substrOrFail($buffer, 0, $this->size - $this->writeLength);
             }
 
             $data = '';

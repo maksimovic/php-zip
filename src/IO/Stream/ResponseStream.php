@@ -175,7 +175,16 @@ class ResponseStream implements StreamInterface
 
     public function tell()
     {
-        return $this->stream ? ftell($this->stream) : false;
+        if ($this->stream === null) {
+            throw new \RuntimeException('Stream is detached');
+        }
+        $pos = ftell($this->stream);
+
+        if ($pos === false) {
+            throw new \RuntimeException('Unable to determine stream position');
+        }
+
+        return $pos;
     }
 
     /**
@@ -217,7 +226,16 @@ class ResponseStream implements StreamInterface
     {
         $this->size = null;
 
-        return $this->stream !== null && $this->writable ? fwrite($this->stream, $string) : false;
+        if ($this->stream === null || !$this->writable) {
+            throw new \RuntimeException('Stream is not writable');
+        }
+        $written = fwrite($this->stream, $string);
+
+        if ($written === false) {
+            throw new \RuntimeException('Unable to write to stream');
+        }
+
+        return $written;
     }
 
     /**
@@ -233,7 +251,12 @@ class ResponseStream implements StreamInterface
      */
     public function read($length): string
     {
-        return $this->stream !== null && $this->readable ? fread($this->stream, $length) : '';
+        if ($this->stream === null || !$this->readable) {
+            return '';
+        }
+        $buffer = fread($this->stream, $length);
+
+        return $buffer === false ? '' : $buffer;
     }
 
     /**
@@ -244,7 +267,12 @@ class ResponseStream implements StreamInterface
      */
     public function getContents(): string
     {
-        return $this->stream ? stream_get_contents($this->stream) : '';
+        if ($this->stream === null) {
+            return '';
+        }
+        $contents = stream_get_contents($this->stream);
+
+        return $contents === false ? '' : $contents;
     }
 
     /**
