@@ -14,6 +14,7 @@ namespace PhpZip\Model\Extra\Fields;
 use PhpZip\Exception\ZipException;
 use PhpZip\Model\Extra\ZipExtraField;
 use PhpZip\Model\ZipEntry;
+use PhpZip\Util\PackUtil;
 
 /**
  * Apk Alignment Extra Field.
@@ -101,7 +102,7 @@ final class ApkAlignmentExtraField implements ZipExtraField
                 'Minimum 6 bytes of the extensible data block/field used for alignment of uncompressed entries.'
             );
         }
-        $multiple = unpack('v', $buffer)[1];
+        $multiple = PackUtil::unpackOrFail('v', $buffer)[1];
         $padding = $length - 2;
 
         return new self($multiple, $padding);
@@ -130,7 +131,7 @@ final class ApkAlignmentExtraField implements ZipExtraField
      */
     public function packLocalFileData(): string
     {
-        return pack('vx' . $this->padding, $this->multiple);
+        return PackUtil::packOrFail('vx' . $this->padding, $this->multiple);
     }
 
     /**
@@ -146,11 +147,13 @@ final class ApkAlignmentExtraField implements ZipExtraField
 
     public function __toString(): string
     {
-        return sprintf(
+        $formatted = sprintf(
             '0x%04x APK Alignment: Multiple=%d Padding=%d',
             self::HEADER_ID,
             $this->multiple,
             $this->padding
         );
+
+        return $formatted === false ? '' : $formatted;
     }
 }

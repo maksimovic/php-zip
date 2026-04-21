@@ -504,7 +504,7 @@ class ZipEntry
                 $this->compressionLevel = ZipCompressionLevel::MAXIMUM;
             } elseif (!$bit1 && $bit2) {
                 $this->compressionLevel = ZipCompressionLevel::FAST;
-            } elseif ($bit1 && $bit2) {
+            } elseif ($bit1) {
                 $this->compressionLevel = ZipCompressionLevel::SUPER_FAST;
             } else {
                 $this->compressionLevel = ZipCompressionLevel::NORMAL;

@@ -13,4 +13,18 @@
             <directory name="tests"/>
         </ignoreFiles>
     </projectFiles>
+
+    <issueHandlers>
+        <!-- Requires PHP 8.3+; this package supports PHP 7.4+. -->
+        <MissingOverrideAttribute errorLevel="suppress" />
+
+        <!-- Public library API. Psalm only sees internal call sites, not external consumers. -->
+        <PossiblyUnusedMethod errorLevel="suppress" />
+        <PossiblyUnusedReturnValue errorLevel="suppress" />
+        <UnusedClass errorLevel="suppress" />
+
+        <!-- Cleanup calls on PHP stream APIs (stream_filter_remove, stream_wrapper_unregister) return bool that's
+             traditionally unchecked — failure in a finally block is unrecoverable. -->
+        <UnusedFunctionCall errorLevel="suppress" />
+    </issueHandlers>
 </psalm>

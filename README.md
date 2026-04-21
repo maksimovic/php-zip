@@ -1,5 +1,22 @@
 <h1 align="center"><img src="logo.svg" alt="PhpZip" width="250" height="51"></h1>
 
+### `maksimovic/php-zip`
+
+A fork of [`nelexa/zip`](https://github.com/Ne-Lexa/php-zip) — the PhpZip library for extended work with ZIP archives.
+
+### Why this fork
+
+Upstream has been dormant and has not picked up PHP 8.5 compatibility. This fork adds it:
+
+- **PHP 8.5** support (including the dynamic-property deprecation fix)
+- CI matrix extended to PHP 8.5
+
+### Drop-in replacement
+
+`composer.json` declares `"replace": {"nelexa/zip": "*"}`, so any consumer still requiring `nelexa/zip` can pull this fork without changing their constraint — add `maksimovic/php-zip` to the project's `require` and composer will resolve the replacement.
+
+---
+
 `PhpZip` is a php-library for extended work with ZIP-archives.
 
 [![Packagist Version](https://img.shields.io/packagist/v/nelexa/zip.svg)](https://packagist.org/packages/nelexa/zip)

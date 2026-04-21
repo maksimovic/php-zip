@@ -71,10 +71,12 @@ final class UnicodeCommentExtraField extends AbstractUnicodeExtraField
 
     public function __toString(): string
     {
-        return sprintf(
+        $formatted = sprintf(
             '0x%04x UnicodeComment: "%s"',
             self::HEADER_ID,
             $this->getUnicodeValue()
         );
+
+        return $formatted === false ? '' : $formatted;
     }
 }

@@ -14,6 +14,9 @@ namespace PhpZip\Model\Extra;
 /**
  * Represents a collection of Extra Fields as they may
  * be present at several locations in ZIP files.
+ *
+ * @template-implements \ArrayAccess<int, ZipExtraField>
+ * @template-implements \Iterator<int, ZipExtraField>
  */
 class ExtraFieldsCollection implements \ArrayAccess, \Countable, \Iterator
 {
@@ -193,9 +196,11 @@ class ExtraFieldsCollection implements \ArrayAccess, \Countable, \Iterator
      *
      * @see http://php.net/manual/en/iterator.current.php
      */
-    public function current(): ZipExtraField
+    public function current(): ?ZipExtraField
     {
-        return current($this->collection);
+        $current = current($this->collection);
+
+        return $current === false ? null : $current;
     }
 
     /**
@@ -213,9 +218,9 @@ class ExtraFieldsCollection implements \ArrayAccess, \Countable, \Iterator
      *
      * @see http://php.net/manual/en/iterator.key.php
      *
-     * @return int scalar on success, or null on failure
+     * @return int|null scalar on success, or null on failure
      */
-    public function key(): int
+    public function key(): ?int
     {
         return key($this->collection);
     }
@@ -252,7 +257,7 @@ class ExtraFieldsCollection implements \ArrayAccess, \Countable, \Iterator
     {
         $formats = [];
 
-        foreach ($this->collection as $key => $value) {
+        foreach ($this->collection as $value) {
             $formats[] = (string) $value;
         }
 

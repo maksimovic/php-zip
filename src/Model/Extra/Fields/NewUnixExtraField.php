@@ -14,6 +14,7 @@ namespace PhpZip\Model\Extra\Fields;
 use PhpZip\Exception\ZipException;
 use PhpZip\Model\Extra\ZipExtraField;
 use PhpZip\Model\ZipEntry;
+use PhpZip\Util\PackUtil;
 
 /**
  * Info-ZIP New Unix Extra Field:
@@ -106,13 +107,13 @@ final class NewUnixExtraField implements ZipExtraField
         [
             'version' => $version,
             'uidSize' => $uidSize,
-        ] = unpack('Cversion/CuidSize', $buffer);
+        ] = PackUtil::unpackOrFail('Cversion/CuidSize', $buffer);
         $offset += 2;
-        $gid = self::readSizeIntegerLE(substr($buffer, $offset, $uidSize), $uidSize);
+        $gid = self::readSizeIntegerLE(PackUtil::substrOrFail($buffer, $offset, $uidSize), $uidSize);
         $offset += $uidSize;
-        $gidSize = unpack('C', $buffer[$offset])[1];
+        $gidSize = PackUtil::unpackOrFail('C', $buffer[$offset])[1];
         $offset++;
-        $uid = self::readSizeIntegerLE(substr($buffer, $offset, $gidSize), $gidSize);
+        $uid = self::readSizeIntegerLE(PackUtil::substrOrFail($buffer, $offset, $gidSize), $gidSize);
 
         return new self($version, $gid, $uid);
     }
@@ -140,7 +141,7 @@ final class NewUnixExtraField implements ZipExtraField
      */
     public function packLocalFileData(): string
     {
-        return pack(
+        return PackUtil::packOrFail(
             'CCVCV',
             $this->version,
             4, // UIDSize
@@ -176,7 +177,7 @@ final class NewUnixExtraField implements ZipExtraField
             throw new ZipException(sprintf('Invalid size bytes: %d', $size));
         }
 
-        return unpack($format[$size], $data)[1];
+        return PackUtil::unpackOrFail($format[$size], $data)[1];
     }
 
     public function getUid(): int
@@ -206,11 +207,13 @@ final class NewUnixExtraField implements ZipExtraField
 
     public function __toString(): string
     {
-        return sprintf(
+        $formatted = sprintf(
             '0x%04x NewUnix: UID=%d GID=%d',
             self::HEADER_ID,
             $this->uid,
             $this->gid
         );
+
+        return $formatted === false ? '' : $formatted;
     }
 }

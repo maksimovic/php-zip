@@ -26,6 +26,7 @@ use PhpZip\Model\Extra\Fields\WinZipAesExtraField;
 use PhpZip\Model\Extra\Fields\Zip64ExtraField;
 use PhpZip\Model\ZipContainer;
 use PhpZip\Model\ZipEntry;
+use PhpZip\Util\PackUtil;
 
 class ZipWriter
 {
@@ -53,9 +54,9 @@ class ZipWriter
         }
         $this->beforeWrite();
         $this->writeLocalBlock($outStream);
-        $cdOffset = ftell($outStream);
+        $cdOffset = PackUtil::ftellOrFail($outStream);
         $this->writeCentralDirectoryBlock($outStream);
-        $cdSize = ftell($outStream) - $cdOffset;
+        $cdSize = PackUtil::ftellOrFail($outStream) - $cdOffset;
         $this->writeEndOfCentralDirectoryBlock($outStream, $cdOffset, $cdSize);
     }
 
@@ -89,7 +90,7 @@ class ZipWriter
      */
     protected function writeLocalHeader($outStream, ZipEntry $entry): void
     {
-        $relativeOffset = ftell($outStream);
+        $relativeOffset = PackUtil::ftellOrFail($outStream);
         $entry->setLocalHeaderOffset($relativeOffset);
 
         if ($entry->isEncrypted() && $entry->getEncryptionMethod() === ZipEncryptionMethod::PKWARE) {
@@ -158,7 +159,7 @@ class ZipWriter
 
         fwrite(
             $outStream,
-            pack(
+            PackUtil::packOrFail(
                 'VvvvVVVVvv',
                 // local file header signature     4 bytes  (0x04034b50)
                 ZipConstants::LOCAL_FILE_HEADER,
@@ -206,12 +207,16 @@ class ZipWriter
         $extraData = '';
 
         foreach ($collection as $extraField) {
+            if ($extraField === null) {
+                continue;
+            }
+
             if ($local) {
                 $data = $extraField->packLocalFileData();
             } else {
                 $data = $extraField->packCentralDirData();
             }
-            $extraData .= pack(
+            $extraData .= PackUtil::packOrFail(
                 'vv',
                 $extraField->getHeaderId(),
                 \strlen($data)
@@ -278,7 +283,7 @@ class ZipWriter
 
         $uncompressedSize = $entry->getUncompressedSize();
 
-        $posBeforeWrite = ftell($outStream);
+        $posBeforeWrite = PackUtil::ftellOrFail($outStream);
         $compressionMethod = $entry->getCompressionMethod();
 
         if ($entry->isEncrypted()) {
@@ -287,6 +292,10 @@ class ZipWriter
                 $checksum = $this->writeAndCountChecksum($entryStream, $outStream, $uncompressedSize);
             } else {
                 $compressStream = fopen('php://temp', 'w+b');
+
+                if ($compressStream === false) {
+                    throw new ZipException('Unable to open a temporary stream for compressed entry data');
+                }
                 $contextFilter = $this->appendCompressionFilter($compressStream, $entry);
                 $checksum = $this->writeAndCountChecksum($entryStream, $compressStream, $uncompressedSize);
 
@@ -297,7 +306,12 @@ class ZipWriter
 
                 rewind($compressStream);
 
-                $compressedSize = fstat($compressStream)['size'];
+                $stat = fstat($compressStream);
+
+                if ($stat === false) {
+                    throw new ZipException('Unable to fstat compressed stream');
+                }
+                $compressedSize = $stat['size'];
                 $contextFilter = $this->appendEncryptionFilter($outStream, $entry, $compressedSize);
 
                 stream_copy_to_stream($compressStream, $outStream);
@@ -309,12 +323,11 @@ class ZipWriter
 
         if ($contextFilter !== null) {
             stream_filter_remove($contextFilter);
-            $contextFilter = null;
         }
 
         // my hack {@see https://bugs.php.net/bug.php?id=49874}
         fseek($outStream, 0, \SEEK_END);
-        $compressedSize = ftell($outStream) - $posBeforeWrite;
+        $compressedSize = PackUtil::ftellOrFail($outStream) - $posBeforeWrite;
 
         $entry->setCompressedSize($compressedSize);
         $entry->setCrc($checksum);
@@ -339,7 +352,7 @@ class ZipWriter
                     fseek($outStream, $posGPBF);
                     fwrite(
                         $outStream,
-                        pack(
+                        PackUtil::packOrFail(
                             'v',
                             // general purpose bit flag        2 bytes
                             $entry->getGeneralPurposeBitFlags()
@@ -363,7 +376,7 @@ class ZipWriter
             fseek($outStream, $posChecksum);
             fwrite(
                 $outStream,
-                pack(
+                PackUtil::packOrFail(
                     'VVV',
                     // crc-32                          4 bytes
                     $checksum,
@@ -384,11 +397,16 @@ class ZipWriter
     private function writeAndCountChecksum($inStream, $outStream, int $size): int
     {
         $contextHash = hash_init('crc32b');
+
+        /** @psalm-suppress TypeDoesNotContainType hash_init return type varies between psalm 8.1/8.5 stubs */
+        if ($contextHash === false) {
+            throw new ZipException('Unable to init crc32b hash context');
+        }
         $offset = 0;
 
         while ($offset < $size) {
             $read = min(self::CHUNK_SIZE, $size - $offset);
-            $buffer = fread($inStream, $read);
+            $buffer = PackUtil::freadOrFail($inStream, $read);
             fwrite($outStream, $buffer);
             hash_update($contextHash, $buffer);
             $offset += $read;
@@ -499,7 +517,7 @@ class ZipWriter
 
         fwrite(
             $outStream,
-            pack(
+            PackUtil::packOrFail(
                 'VV',
                 // data descriptor signature       4 bytes  (0x08074b50)
                 ZipConstants::DATA_DESCRIPTOR,
@@ -512,7 +530,7 @@ class ZipWriter
             $entry->isZip64ExtensionsRequired()
             || $entry->getLocalExtraFields()->has(Zip64ExtraField::HEADER_ID)
         ) {
-            $dd = pack(
+            $dd = PackUtil::packOrFail(
                 'PP',
                 // compressed size                 8 bytes
                 $entry->getCompressedSize(),
@@ -520,7 +538,7 @@ class ZipWriter
                 $entry->getUncompressedSize()
             );
         } else {
-            $dd = pack(
+            $dd = PackUtil::packOrFail(
                 'VV',
                 // compressed size                 4 bytes
                 $entry->getCompressedSize(),
@@ -617,7 +635,7 @@ class ZipWriter
 
         fwrite(
             $outStream,
-            pack(
+            PackUtil::packOrFail(
                 'VvvvvVVVVvvvvvVV',
                 // central file header signature   4 bytes  (0x02014b50)
                 ZipConstants::CENTRAL_FILE_HEADER,
@@ -687,7 +705,7 @@ class ZipWriter
             || $cdOffsetZip64;
 
         if ($zip64Required) {
-            $zip64EndOfCentralDirectoryOffset = ftell($outStream);
+            $zip64EndOfCentralDirectoryOffset = PackUtil::ftellOrFail($outStream);
 
             // find max software version, version needed to extract and most common platform
             [$softwareVersion, $versionNeededToExtract] = array_reduce(
@@ -708,7 +726,7 @@ class ZipWriter
             // write zip64 end of central directory signature
             fwrite(
                 $outStream,
-                pack(
+                PackUtil::packOrFail(
                     'VPvvVVPPPPVVPV',
                     // signature                       4 bytes  (0x06064b50)
                     ZipConstants::ZIP64_END_CD,
@@ -757,7 +775,7 @@ class ZipWriter
 
         fwrite(
             $outStream,
-            pack(
+            PackUtil::packOrFail(
                 'VvvvvVVv',
                 // end of central dir signature    4 bytes  (0x06054b50)
                 ZipConstants::END_CD,

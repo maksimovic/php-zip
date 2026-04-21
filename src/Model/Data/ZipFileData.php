@@ -46,8 +46,13 @@ class ZipFileData implements ZipData
         if (!$this->file->isReadable()) {
             throw new ZipException(sprintf('The %s file is no longer readable.', $this->file->getPathname()));
         }
+        $stream = fopen($this->file->getPathname(), 'rb');
 
-        return fopen($this->file->getPathname(), 'rb');
+        if ($stream === false) {
+            throw new ZipException(sprintf('Unable to open %s for reading.', $this->file->getPathname()));
+        }
+
+        return $stream;
     }
 
     /**
@@ -60,8 +65,13 @@ class ZipFileData implements ZipData
         if (!$this->file->isReadable()) {
             throw new ZipException(sprintf('The %s file is no longer readable.', $this->file->getPathname()));
         }
+        $contents = file_get_contents($this->file->getPathname());
 
-        return file_get_contents($this->file->getPathname());
+        if ($contents === false) {
+            throw new ZipException(sprintf('Unable to read %s.', $this->file->getPathname()));
+        }
+
+        return $contents;
     }
 
     /**

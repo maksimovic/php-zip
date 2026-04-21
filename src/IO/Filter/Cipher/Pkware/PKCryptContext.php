@@ -14,6 +14,7 @@ namespace PhpZip\IO\Filter\Cipher\Pkware;
 use PhpZip\Exception\RuntimeException;
 use PhpZip\Exception\ZipAuthenticationException;
 use PhpZip\Util\MathUtil;
+use PhpZip\Util\PackUtil;
 
 /**
  * Traditional PKWARE Encryption Engine.
@@ -304,7 +305,7 @@ class PKCryptContext
             878082192,
         ];
 
-        foreach (unpack('C*', $password) as $byte) {
+        foreach (PackUtil::unpackOrFail('C*', $password) as $byte) {
             $this->updateKeys($byte);
         }
     }
@@ -314,9 +315,12 @@ class PKCryptContext
      */
     public function checkHeader(string $header, int $checkByte): void
     {
+        if ($header === '') {
+            throw new ZipAuthenticationException('Invalid password');
+        }
         $byte = 0;
 
-        foreach (unpack('C*', $header) as $byte) {
+        foreach (PackUtil::unpackOrFail('C*', $header) as $byte) {
             $byte = ($byte ^ $this->decryptByte()) & 0xFF;
             $this->updateKeys($byte);
         }
@@ -330,7 +334,7 @@ class PKCryptContext
     {
         $decryptContent = '';
 
-        foreach (unpack('C*', $content) as $byte) {
+        foreach (PackUtil::unpackOrFail('C*', $content) as $byte) {
             $byte = ($byte ^ $this->decryptByte()) & 0xFF;
             $this->updateKeys($byte);
             $decryptContent .= \chr($byte);
@@ -372,8 +376,8 @@ class PKCryptContext
     {
         $encryptContent = '';
 
-        foreach (unpack('C*', $content) as $val) {
-            $encryptContent .= pack('c', $this->encryptByte($val));
+        foreach (PackUtil::unpackOrFail('C*', $content) as $val) {
+            $encryptContent .= PackUtil::packOrFail('c', $this->encryptByte($val));
         }
 
         return $encryptContent;

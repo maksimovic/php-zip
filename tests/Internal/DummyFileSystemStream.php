@@ -18,6 +18,9 @@ namespace PhpZip\Tests\Internal;
  */
 class DummyFileSystemStream
 {
+    /** @var resource|null */
+    public $context;
+
     /** @var resource */
     private $fp;
 

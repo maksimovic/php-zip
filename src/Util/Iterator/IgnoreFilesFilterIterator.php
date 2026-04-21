@@ -15,6 +15,8 @@ use PhpZip\Util\StringUtil;
 
 /**
  * Iterator for ignore files.
+ *
+ * @template-extends \FilterIterator<array-key, mixed, \Iterator<array-key, mixed>>
  */
 class IgnoreFilesFilterIterator extends \FilterIterator
 {
@@ -46,7 +48,7 @@ class IgnoreFilesFilterIterator extends \FilterIterator
             // handler dir and sub dir
             if ($fileInfo->isDir()
                 && StringUtil::endsWith($ignoreFile, '/')
-                && StringUtil::endsWith($pathname, substr($ignoreFile, 0, -1))
+                && StringUtil::endsWith($pathname, (string) substr($ignoreFile, 0, -1))
             ) {
                 return false;
             }

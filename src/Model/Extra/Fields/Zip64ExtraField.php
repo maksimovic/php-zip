@@ -16,6 +16,7 @@ use PhpZip\Exception\RuntimeException;
 use PhpZip\Exception\ZipException;
 use PhpZip\Model\Extra\ZipExtraField;
 use PhpZip\Model\ZipEntry;
+use PhpZip\Util\PackUtil;
 
 /**
  * ZIP64 Extra Field.
@@ -88,7 +89,7 @@ final class Zip64ExtraField implements ZipExtraField
         [
             'uncompressedSize' => $uncompressedSize,
             'compressedSize' => $compressedSize,
-        ] = unpack('PuncompressedSize/PcompressedSize', substr($buffer, 0, 16));
+        ] = PackUtil::unpackOrFail('PuncompressedSize/PcompressedSize', PackUtil::substrOrFail($buffer, 0, 16));
 
         return new self($uncompressedSize, $compressedSize);
     }
@@ -121,7 +122,7 @@ final class Zip64ExtraField implements ZipExtraField
             if ($remaining < 8) {
                 throw new ZipException('ZIP64 extension corrupt (no uncompressed size).');
             }
-            $uncompressedSize = unpack('P', substr($buffer, $length - $remaining, 8))[1];
+            $uncompressedSize = PackUtil::unpackOrFail('P', PackUtil::substrOrFail($buffer, $length - $remaining, 8))[1];
             $remaining -= 8;
         }
 
@@ -129,7 +130,7 @@ final class Zip64ExtraField implements ZipExtraField
             if ($remaining < 8) {
                 throw new ZipException('ZIP64 extension corrupt (no compressed size).');
             }
-            $compressedSize = unpack('P', substr($buffer, $length - $remaining, 8))[1];
+            $compressedSize = PackUtil::unpackOrFail('P', PackUtil::substrOrFail($buffer, $length - $remaining, 8))[1];
             $remaining -= 8;
         }
 
@@ -137,12 +138,12 @@ final class Zip64ExtraField implements ZipExtraField
             if ($remaining < 8) {
                 throw new ZipException('ZIP64 extension corrupt (no relative local header offset).');
             }
-            $localHeaderOffset = unpack('P', substr($buffer, $length - $remaining, 8))[1];
+            $localHeaderOffset = PackUtil::unpackOrFail('P', PackUtil::substrOrFail($buffer, $length - $remaining, 8))[1];
             $remaining -= 8;
         }
 
         if ($remaining === 4) {
-            $diskStart = unpack('V', substr($buffer, $length - $remaining, 4))[1];
+            $diskStart = PackUtil::unpackOrFail('V', PackUtil::substrOrFail($buffer, $length - $remaining, 4))[1];
         }
 
         return new self($uncompressedSize, $compressedSize, $localHeaderOffset, $diskStart);
@@ -174,11 +175,11 @@ final class Zip64ExtraField implements ZipExtraField
         $data = '';
 
         if ($this->uncompressedSize !== null) {
-            $data .= pack('P', $this->uncompressedSize);
+            $data .= PackUtil::packOrFail('P', $this->uncompressedSize);
         }
 
         if ($this->compressedSize !== null) {
-            $data .= pack('P', $this->compressedSize);
+            $data .= PackUtil::packOrFail('P', $this->compressedSize);
         }
 
         return $data;
@@ -195,11 +196,11 @@ final class Zip64ExtraField implements ZipExtraField
         $data = $this->packSizes();
 
         if ($this->localHeaderOffset !== null) {
-            $data .= pack('P', $this->localHeaderOffset);
+            $data .= PackUtil::packOrFail('P', $this->localHeaderOffset);
         }
 
         if ($this->diskStart !== null) {
-            $data .= pack('V', $this->diskStart);
+            $data .= PackUtil::packOrFail('V', $this->diskStart);
         }
 
         return $data;
@@ -272,6 +273,8 @@ final class Zip64ExtraField implements ZipExtraField
         }
         $format .= implode(' ', $formats);
 
-        return vsprintf($format, $args);
+        $formatted = vsprintf($format, $args);
+
+        return $formatted === false ? '' : $formatted;
     }
 }

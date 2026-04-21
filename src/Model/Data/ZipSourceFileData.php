@@ -79,10 +79,19 @@ class ZipSourceFileData implements ZipData
         $stream = $this->getDataAsStream();
         $pos = ftell($stream);
 
+        if ($pos === false) {
+            throw new ZipException(sprintf('Unable to read stream position (entry=%s).', $this->sourceEntry->getName()));
+        }
+
         try {
             rewind($stream);
+            $contents = stream_get_contents($stream);
 
-            return stream_get_contents($stream);
+            if ($contents === false) {
+                throw new ZipException(sprintf('Unable to read stream contents (entry=%s).', $this->sourceEntry->getName()));
+            }
+
+            return $contents;
         } finally {
             if ($autoClosable) {
                 fclose($stream);

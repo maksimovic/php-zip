@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace PhpZip\Model;
 
+use PhpZip\Exception\InvalidArgumentException;
 use PhpZip\Exception\ZipEntryNotFoundException;
 
 class ZipEntryMatcher implements \Countable
@@ -62,6 +63,10 @@ class ZipEntryMatcher implements \Countable
      */
     public function match(string $regexp): self
     {
+        if ($regexp === '') {
+            throw new InvalidArgumentException('regexp must not be empty');
+        }
+
         array_walk(
             $this->zipContainer->getEntries(),
             function (ZipEntry $entry, string $entryName) use ($regexp): void {

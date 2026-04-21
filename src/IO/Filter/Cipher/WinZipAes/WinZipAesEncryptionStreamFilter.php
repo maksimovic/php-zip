@@ -14,6 +14,7 @@ namespace PhpZip\IO\Filter\Cipher\WinZipAes;
 use PhpZip\Exception\RuntimeException;
 use PhpZip\Model\Extra\Fields\WinZipAesExtraField;
 use PhpZip\Model\ZipEntry;
+use PhpZip\Util\PackUtil;
 
 /**
  * Encrypt WinZip AES stream.
@@ -73,7 +74,7 @@ class WinZipAesEncryptionStreamFilter extends \php_user_filter
             $this->remaining += $bucket->datalen;
 
             if ($this->remaining > $this->size) {
-                $this->buffer = substr($this->buffer, 0, $this->size - $this->remaining);
+                $this->buffer = PackUtil::substrOrFail($this->buffer, 0, $this->size - $this->remaining);
                 $this->remaining = $this->size;
             }
 
@@ -129,10 +130,10 @@ class WinZipAesEncryptionStreamFilter extends \php_user_filter
                 $this->context->updateIv();
                 $length = min(WinZipAesContext::BLOCK_SIZE, $limit - $offset);
                 $encryptionText .= $this->context->encrypt(
-                    substr($this->buffer, 0, $length)
+                    PackUtil::substrOrFail($this->buffer, 0, $length)
                 );
                 $offset += $length;
-                $this->buffer = substr($this->buffer, $length);
+                $this->buffer = PackUtil::substrOrFail($this->buffer, $length);
             }
 
             if ($remaining === 0) {

@@ -112,6 +112,8 @@ final class JarMarkerExtraField implements ZipExtraField
 
     public function __toString(): string
     {
-        return sprintf('0x%04x Jar Marker', self::HEADER_ID);
+        $formatted = sprintf('0x%04x Jar Marker', self::HEADER_ID);
+
+        return $formatted === false ? '' : $formatted;
     }
 }

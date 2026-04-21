@@ -15,6 +15,8 @@ use PhpZip\Util\StringUtil;
 
 /**
  * Recursive iterator for ignore files.
+ *
+ * @template-extends \RecursiveFilterIterator<array-key, mixed, \RecursiveIterator<array-key, mixed>>
  */
 class IgnoreFilesRecursiveFilterIterator extends \RecursiveFilterIterator
 {
@@ -46,7 +48,7 @@ class IgnoreFilesRecursiveFilterIterator extends \RecursiveFilterIterator
             // handler dir and sub dir
             if ($fileInfo->isDir()
                 && $ignoreFile[\strlen($ignoreFile) - 1] === '/'
-                && StringUtil::endsWith($pathname, substr($ignoreFile, 0, -1))
+                && StringUtil::endsWith($pathname, (string) substr($ignoreFile, 0, -1))
             ) {
                 return false;
             }
@@ -67,6 +69,12 @@ class IgnoreFilesRecursiveFilterIterator extends \RecursiveFilterIterator
      */
     public function getChildren(): self
     {
-        return new self($this->getInnerIterator()->getChildren(), $this->ignoreFiles);
+        $inner = $this->getInnerIterator();
+
+        if ($inner === null) {
+            throw new \LogicException('Inner iterator not set');
+        }
+
+        return new self($inner->getChildren(), $this->ignoreFiles);
     }
 }

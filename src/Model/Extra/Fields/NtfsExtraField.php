@@ -99,26 +99,45 @@ final class NtfsExtraField implements ZipExtraField
 
         $buffer = substr($buffer, 4);
 
+        if ($buffer === false) {
+            throw new ZipException('Invalid NTFS extra field: buffer too short');
+        }
+
         $modifyTime = 0;
         $accessTime = 0;
         $createTime = 0;
 
-        while ($buffer || $buffer !== '') {
-            [
-                'tag' => $tag,
-                'sizeAttr' => $sizeAttr,
-            ] = unpack('vtag/vsizeAttr', $buffer);
+        while ($buffer !== '') {
+            $header = unpack('vtag/vsizeAttr', $buffer);
+
+            if ($header === false) {
+                throw new ZipException('Invalid NTFS extra field: cannot unpack tag/sizeAttr');
+            }
+            $tag = $header['tag'];
+            $sizeAttr = $header['sizeAttr'];
 
             if ($tag === self::TIME_ATTR_TAG && $sizeAttr === self::TIME_ATTR_SIZE) {
-                [
-                    'modifyTime' => $modifyTime,
-                    'accessTime' => $accessTime,
-                    'createTime' => $createTime,
-                ] = unpack('PmodifyTime/PaccessTime/PcreateTime', substr($buffer, 4, 24));
+                $slice = substr($buffer, 4, 24);
+
+                if ($slice === false) {
+                    throw new ZipException('Invalid NTFS extra field: time attribute slice too short');
+                }
+                $times = unpack('PmodifyTime/PaccessTime/PcreateTime', $slice);
+
+                if ($times === false) {
+                    throw new ZipException('Invalid NTFS extra field: cannot unpack time attributes');
+                }
+                $modifyTime = $times['modifyTime'];
+                $accessTime = $times['accessTime'];
+                $createTime = $times['createTime'];
 
                 break;
             }
             $buffer = substr($buffer, 4 + $sizeAttr);
+
+            if ($buffer === false) {
+                break;
+            }
         }
 
         return new self($modifyTime, $accessTime, $createTime);
@@ -147,7 +166,7 @@ final class NtfsExtraField implements ZipExtraField
      */
     public function packLocalFileData(): string
     {
-        return pack(
+        return \PhpZip\Util\PackUtil::packOrFail(
             'VvvPPP',
             0,
             self::TIME_ATTR_TAG,
@@ -234,7 +253,7 @@ final class NtfsExtraField implements ZipExtraField
      */
     public static function timestampToNtfsTime(float $timestamp): int
     {
-        return (int) (($timestamp * 10000000) - self::EPOCH_OFFSET);
+        return (int) (($timestamp * 10000000.0) - (float) self::EPOCH_OFFSET);
     }
 
     public static function dateTimeToNtfsTime(\DateTimeInterface $dateTime): int
@@ -247,7 +266,7 @@ final class NtfsExtraField implements ZipExtraField
      */
     public static function ntfsTimeToTimestamp(int $ntfsTime): float
     {
-        return (float) (($ntfsTime + self::EPOCH_OFFSET) / 10000000);
+        return (float) ($ntfsTime + self::EPOCH_OFFSET) / 10000000.0;
     }
 
     public static function ntfsTimeToDateTime(int $ntfsTime): \DateTimeInterface
@@ -256,7 +275,7 @@ final class NtfsExtraField implements ZipExtraField
         $dateTime = \DateTimeImmutable::createFromFormat('U.u', sprintf('%.6f', $timestamp));
 
         if ($dateTime === false) {
-            throw new InvalidArgumentException('Cannot create date/time object for timestamp ' . $timestamp);
+            throw new InvalidArgumentException('Cannot create date/time object for timestamp ' . (string) $timestamp);
         }
 
         return $dateTime;
@@ -282,6 +301,12 @@ final class NtfsExtraField implements ZipExtraField
             $args[] = $this->getCreateDateTime()->format(\DATE_ATOM);
         }
 
-        return vsprintf($format, $args);
+        $formatted = vsprintf($format, $args);
+
+        if ($formatted === false) {
+            return '';
+        }
+
+        return $formatted;
     }
 }

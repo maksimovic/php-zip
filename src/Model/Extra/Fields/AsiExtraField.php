@@ -15,6 +15,7 @@ use PhpZip\Constants\UnixStat;
 use PhpZip\Exception\Crc32Exception;
 use PhpZip\Model\Extra\ZipExtraField;
 use PhpZip\Model\ZipEntry;
+use PhpZip\Util\PackUtil;
 
 /**
  * ASi Unix Extra Field:
@@ -108,8 +109,8 @@ final class AsiExtraField implements ZipExtraField
      */
     public static function unpackLocalFileData(string $buffer, ?ZipEntry $entry = null): self
     {
-        $givenChecksum = unpack('V', $buffer)[1];
-        $buffer = substr($buffer, 4);
+        $givenChecksum = PackUtil::unpackOrFail('V', $buffer)[1];
+        $buffer = PackUtil::substrOrFail($buffer, 4);
         $realChecksum = crc32($buffer);
 
         if ($givenChecksum !== $realChecksum) {
@@ -121,11 +122,11 @@ final class AsiExtraField implements ZipExtraField
             'linkSize' => $linkSize,
             'uid' => $uid,
             'gid' => $gid,
-        ] = unpack('vmode/VlinkSize/vuid/vgid', $buffer);
+        ] = PackUtil::unpackOrFail('vmode/VlinkSize/vuid/vgid', $buffer);
         $link = '';
 
         if ($linkSize > 0) {
-            $link = substr($buffer, 10);
+            $link = PackUtil::substrOrFail($buffer, 10);
         }
 
         return new self($mode, $uid, $gid, $link);
@@ -154,7 +155,7 @@ final class AsiExtraField implements ZipExtraField
      */
     public function packLocalFileData(): string
     {
-        $data = pack(
+        $data = PackUtil::packOrFail(
             'vVvv',
             $this->mode,
             \strlen($this->link),
@@ -162,7 +163,7 @@ final class AsiExtraField implements ZipExtraField
             $this->gid
         ) . $this->link;
 
-        return pack('V', crc32($data)) . $data;
+        return PackUtil::packOrFail('V', crc32($data)) . $data;
     }
 
     /**
@@ -273,7 +274,7 @@ final class AsiExtraField implements ZipExtraField
 
     public function __toString(): string
     {
-        return sprintf(
+        $formatted = sprintf(
             '0x%04x ASI: Mode=%o UID=%d GID=%d Link="%s',
             self::HEADER_ID,
             $this->mode,
@@ -281,5 +282,7 @@ final class AsiExtraField implements ZipExtraField
             $this->gid,
             $this->link
         );
+
+        return $formatted === false ? '' : $formatted;
     }
 }

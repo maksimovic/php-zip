@@ -31,8 +31,9 @@ final class FilesUtil
         if (!is_readable($dir)) {
             return false;
         }
+        $entries = scandir($dir);
 
-        return \count(scandir($dir)) === 2;
+        return $entries !== false && \count($entries) === 2;
     }
 
     /**
@@ -114,7 +115,7 @@ final class FilesUtil
                 case '}':
                     if ($inCurrent > 0 && !$escaping) {
                         $regexPattern .= ')';
-                        $inCurrent--;
+                        --$inCurrent;
                     } elseif ($escaping) {
                         $regexPattern = '\\}';
                     } else {
@@ -182,13 +183,15 @@ final class FilesUtil
      */
     public static function globFileSearch(string $globPattern, int $flags = 0, bool $recursive = true): array
     {
-        $files = glob($globPattern, $flags);
+        /** @psalm-suppress ArgumentTypeCoercion glob flags are a bitmask of GLOB_* constants — psalm stubs are over-strict */
+        $files = glob($globPattern, $flags) ?: [];
 
         if (!$recursive) {
             return $files;
         }
+        $dirs = glob(\dirname($globPattern) . \DIRECTORY_SEPARATOR . '*', \GLOB_ONLYDIR | \GLOB_NOSORT) ?: [];
 
-        foreach (glob(\dirname($globPattern) . \DIRECTORY_SEPARATOR . '*', \GLOB_ONLYDIR | \GLOB_NOSORT) as $dir) {
+        foreach ($dirs as $dir) {
             // Unpacking the argument via ... is supported starting from php 5.6 only
             /** @noinspection SlowArrayOperationsInLoopInspection */
             $files = array_merge($files, self::globFileSearch($dir . \DIRECTORY_SEPARATOR . basename($globPattern), $flags, $recursive));
@@ -376,7 +379,11 @@ final class FilesUtil
     public static function getMimeTypeFromFile(string $file): string
     {
         if (\function_exists('mime_content_type')) {
-            return mime_content_type($file);
+            $mimeType = mime_content_type($file);
+
+            if ($mimeType !== false) {
+                return $mimeType;
+            }
         }
 
         return 'application/octet-stream';

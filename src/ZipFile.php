@@ -45,6 +45,9 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  * Implemented support ZIP64.
  *
  * @see https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT .ZIP File Format Specification
+ *
+ * @template-implements \ArrayAccess<string, string>
+ * @template-implements \Iterator<string, ?string>
  */
 class ZipFile implements \Countable, \ArrayAccess, \Iterator
 {
@@ -109,6 +112,10 @@ class ZipFile implements \Countable, \ArrayAccess, \Iterator
         );
         $handle = fopen($filename, 'rb');
         restore_error_handler();
+
+        if ($handle === false) {
+            throw new ZipException(sprintf('Unable to open %s for reading', $filename));
+        }
 
         return $this->openFromStream($handle, $options);
     }
@@ -441,6 +448,10 @@ class ZipFile implements \Countable, \ArrayAccess, \Iterator
             $handle = fopen($file, 'w+b');
             restore_error_handler();
 
+            if ($handle === false) {
+                throw new ZipException(sprintf('Unable to open %s for writing extracted entry', $file));
+            }
+
             try {
                 $zipData->copyDataToStream($handle);
             } catch (ZipException $e) {
@@ -746,7 +757,7 @@ class ZipFile implements \Countable, \ArrayAccess, \Iterator
                     rewind($stream);
                     $bufferContents = stream_get_contents($stream, min(1024, $length));
                     rewind($stream);
-                    $mimeType = FilesUtil::getMimeTypeFromString($bufferContents);
+                    $mimeType = FilesUtil::getMimeTypeFromString($bufferContents === false ? '' : $bufferContents);
                     $compressionMethod = FilesUtil::isBadCompressionMimeType($mimeType)
                         ? ZipCompressionMethod::STORED
                         : ZipCompressionMethod::DEFLATED;
@@ -1490,6 +1501,10 @@ class ZipFile implements \Countable, \ArrayAccess, \Iterator
         );
         $handle = fopen($tempFilename, 'w+b');
         restore_error_handler();
+
+        if ($handle === false) {
+            throw new ZipException(sprintf('Unable to open temporary file %s for writing', $tempFilename));
+        }
         $this->saveAsStream($handle);
 
         $reopen = false;
@@ -1591,7 +1606,12 @@ class ZipFile implements \Countable, \ArrayAccess, \Iterator
         $this->writeZipToStream($handle);
         $this->close();
 
-        $size = fstat($handle)['size'];
+        $stat = fstat($handle);
+
+        if ($stat === false) {
+            throw new \RuntimeException('Unable to fstat archive stream');
+        }
+        $size = $stat['size'];
 
         $contentDisposition = $attachment ? 'attachment' : 'inline';
         $name = basename($outputFilename);
@@ -1745,7 +1765,13 @@ class ZipFile implements \Countable, \ArrayAccess, \Iterator
         rewind($handle);
 
         try {
-            return stream_get_contents($handle);
+            $contents = stream_get_contents($handle);
+
+            if ($contents === false) {
+                throw new \RuntimeException('Unable to read archive contents');
+            }
+
+            return $contents;
         } finally {
             fclose($handle);
         }

@@ -102,7 +102,8 @@ final class UnrecognizedExtraField implements ZipExtraField
     {
         $args = [$this->headerId, $this->data];
         $format = '0x%04x Unrecognized Extra Field: "%s"';
+        $formatted = vsprintf($format, $args);
 
-        return vsprintf($format, $args);
+        return $formatted === false ? '' : $formatted;
     }
 }

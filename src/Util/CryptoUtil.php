@@ -34,7 +34,13 @@ final class CryptoUtil
         if (\extension_loaded('openssl')) {
             $numBits = \strlen($key) * 8;
             /** @noinspection PhpComposerExtensionStubsInspection */
-            return openssl_decrypt($data, 'AES-' . $numBits . '-CTR', $key, \OPENSSL_RAW_DATA, $iv);
+            $decrypted = openssl_decrypt($data, 'AES-' . $numBits . '-CTR', $key, \OPENSSL_RAW_DATA, $iv);
+
+            if ($decrypted === false) {
+                throw new RuntimeException('Openssl AES-CTR decryption failed');
+            }
+
+            return $decrypted;
         }
 
         throw new RuntimeException('Openssl extension not loaded');
@@ -54,7 +60,13 @@ final class CryptoUtil
         if (\extension_loaded('openssl')) {
             $numBits = \strlen($key) * 8;
             /** @noinspection PhpComposerExtensionStubsInspection */
-            return openssl_encrypt($data, 'AES-' . $numBits . '-CTR', $key, \OPENSSL_RAW_DATA, $iv);
+            $encrypted = openssl_encrypt($data, 'AES-' . $numBits . '-CTR', $key, \OPENSSL_RAW_DATA, $iv);
+
+            if ($encrypted === false) {
+                throw new RuntimeException('Openssl AES-CTR encryption failed');
+            }
+
+            return $encrypted;
         }
 
         throw new RuntimeException('Openssl extension not loaded');

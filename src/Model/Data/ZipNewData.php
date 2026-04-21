@@ -83,10 +83,19 @@ class ZipNewData implements ZipData
         $stream = $this->getDataAsStream();
         $pos = ftell($stream);
 
+        if ($pos === false) {
+            throw new \RuntimeException(sprintf('Unable to read stream position (entry=%s).', $this->zipEntry->getName()));
+        }
+
         try {
             rewind($stream);
+            $contents = stream_get_contents($stream);
 
-            return stream_get_contents($stream);
+            if ($contents === false) {
+                throw new \RuntimeException(sprintf('Unable to read stream contents (entry=%s).', $this->zipEntry->getName()));
+            }
+
+            return $contents;
         } finally {
             fseek($stream, $pos);
         }
