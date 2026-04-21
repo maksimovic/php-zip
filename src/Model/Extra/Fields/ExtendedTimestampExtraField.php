@@ -13,6 +13,7 @@ namespace PhpZip\Model\Extra\Fields;
 
 use PhpZip\Model\Extra\ZipExtraField;
 use PhpZip\Model\ZipEntry;
+use PhpZip\Util\PackUtil;
 
 /**
  * Extended Timestamp Extra Field:
@@ -166,7 +167,7 @@ final class ExtendedTimestampExtraField implements ZipExtraField
     public static function unpackLocalFileData(string $buffer, ?ZipEntry $entry = null): self
     {
         $length = \strlen($buffer);
-        $flags = unpack('C', $buffer)[1];
+        $flags = PackUtil::unpackOrFail('C', $buffer)[1];
         $offset = 1;
 
         $modifyTime = null;
@@ -174,19 +175,19 @@ final class ExtendedTimestampExtraField implements ZipExtraField
         $createTime = null;
 
         if (($flags & self::MODIFY_TIME_BIT) === self::MODIFY_TIME_BIT) {
-            $modifyTime = unpack('V', substr($buffer, $offset, 4))[1];
+            $modifyTime = PackUtil::unpackOrFail('V', PackUtil::substrOrFail($buffer, $offset, 4))[1];
             $offset += 4;
         }
 
         // Notice the extra length check in case we are parsing the shorter
         // central data field (for both access and create timestamps).
         if ((($flags & self::ACCESS_TIME_BIT) === self::ACCESS_TIME_BIT) && $offset + 4 <= $length) {
-            $accessTime = unpack('V', substr($buffer, $offset, 4))[1];
+            $accessTime = PackUtil::unpackOrFail('V', PackUtil::substrOrFail($buffer, $offset, 4))[1];
             $offset += 4;
         }
 
         if ((($flags & self::CREATE_TIME_BIT) === self::CREATE_TIME_BIT) && $offset + 4 <= $length) {
-            $createTime = unpack('V', substr($buffer, $offset, 4))[1];
+            $createTime = PackUtil::unpackOrFail('V', PackUtil::substrOrFail($buffer, $offset, 4))[1];
         }
 
         return new self($flags, $modifyTime, $accessTime, $createTime);
@@ -216,18 +217,18 @@ final class ExtendedTimestampExtraField implements ZipExtraField
         $data = '';
 
         if (($this->flags & self::MODIFY_TIME_BIT) === self::MODIFY_TIME_BIT && $this->modifyTime !== null) {
-            $data .= pack('V', $this->modifyTime);
+            $data .= PackUtil::packOrFail('V', $this->modifyTime);
         }
 
         if (($this->flags & self::ACCESS_TIME_BIT) === self::ACCESS_TIME_BIT && $this->accessTime !== null) {
-            $data .= pack('V', $this->accessTime);
+            $data .= PackUtil::packOrFail('V', $this->accessTime);
         }
 
         if (($this->flags & self::CREATE_TIME_BIT) === self::CREATE_TIME_BIT && $this->createTime !== null) {
-            $data .= pack('V', $this->createTime);
+            $data .= PackUtil::packOrFail('V', $this->createTime);
         }
 
-        return pack('C', $this->flags) . $data;
+        return PackUtil::packOrFail('C', $this->flags) . $data;
     }
 
     /**
@@ -243,7 +244,7 @@ final class ExtendedTimestampExtraField implements ZipExtraField
     {
         $cdLength = 1 + ($this->modifyTime !== null ? 4 : 0);
 
-        return substr($this->packLocalFileData(), 0, $cdLength);
+        return PackUtil::substrOrFail($this->packLocalFileData(), 0, $cdLength);
     }
 
     /**
@@ -431,6 +432,8 @@ final class ExtendedTimestampExtraField implements ZipExtraField
             $args[] = date(\DATE_W3C, $this->createTime);
         }
 
-        return vsprintf($format, $args);
+        $formatted = vsprintf($format, $args);
+
+        return $formatted === false ? '' : $formatted;
     }
 }

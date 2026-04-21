@@ -13,6 +13,7 @@ namespace PhpZip\Model\Extra\Fields;
 
 use PhpZip\Model\Extra\ZipExtraField;
 use PhpZip\Model\ZipEntry;
+use PhpZip\Util\PackUtil;
 
 /**
  * Info-ZIP Unix Extra Field (type 1):
@@ -112,19 +113,19 @@ final class OldUnixExtraField implements ZipExtraField
         $accessTime = $modifyTime = $uid = $gid = null;
 
         if ($length >= 4) {
-            $accessTime = unpack('V', $buffer)[1];
+            $accessTime = PackUtil::unpackOrFail('V', $buffer)[1];
         }
 
         if ($length >= 8) {
-            $modifyTime = unpack('V', substr($buffer, 4, 4))[1];
+            $modifyTime = PackUtil::unpackOrFail('V', PackUtil::substrOrFail($buffer, 4, 4))[1];
         }
 
         if ($length >= 10) {
-            $uid = unpack('v', substr($buffer, 8, 2))[1];
+            $uid = PackUtil::unpackOrFail('v', PackUtil::substrOrFail($buffer, 8, 2))[1];
         }
 
         if ($length >= 12) {
-            $gid = unpack('v', substr($buffer, 10, 2))[1];
+            $gid = PackUtil::unpackOrFail('v', PackUtil::substrOrFail($buffer, 10, 2))[1];
         }
 
         return new self($accessTime, $modifyTime, $uid, $gid);
@@ -145,11 +146,11 @@ final class OldUnixExtraField implements ZipExtraField
         $accessTime = $modifyTime = null;
 
         if ($length >= 4) {
-            $accessTime = unpack('V', $buffer)[1];
+            $accessTime = PackUtil::unpackOrFail('V', $buffer)[1];
         }
 
         if ($length >= 8) {
-            $modifyTime = unpack('V', substr($buffer, 4, 4))[1];
+            $modifyTime = PackUtil::unpackOrFail('V', PackUtil::substrOrFail($buffer, 4, 4))[1];
         }
 
         return new self($accessTime, $modifyTime, null, null);
@@ -166,16 +167,16 @@ final class OldUnixExtraField implements ZipExtraField
         $data = '';
 
         if ($this->accessTime !== null) {
-            $data .= pack('V', $this->accessTime);
+            $data .= PackUtil::packOrFail('V', $this->accessTime);
 
             if ($this->modifyTime !== null) {
-                $data .= pack('V', $this->modifyTime);
+                $data .= PackUtil::packOrFail('V', $this->modifyTime);
 
                 if ($this->uid !== null) {
-                    $data .= pack('v', $this->uid);
+                    $data .= PackUtil::packOrFail('v', $this->uid);
 
                     if ($this->gid !== null) {
-                        $data .= pack('v', $this->gid);
+                        $data .= PackUtil::packOrFail('v', $this->gid);
                     }
                 }
             }
@@ -195,10 +196,10 @@ final class OldUnixExtraField implements ZipExtraField
         $data = '';
 
         if ($this->accessTime !== null) {
-            $data .= pack('V', $this->accessTime);
+            $data .= PackUtil::packOrFail('V', $this->accessTime);
 
             if ($this->modifyTime !== null) {
-                $data .= pack('V', $this->modifyTime);
+                $data .= PackUtil::packOrFail('V', $this->modifyTime);
             }
         }
 
@@ -290,6 +291,8 @@ final class OldUnixExtraField implements ZipExtraField
             $args[] = $this->gid;
         }
 
-        return vsprintf($format, $args);
+        $formatted = vsprintf($format, $args);
+
+        return $formatted === false ? '' : $formatted;
     }
 }
