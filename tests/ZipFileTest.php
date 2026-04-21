@@ -1583,7 +1583,7 @@ class ZipFileTest extends ZipTestCase
 
         // Test \Iterator
         reset($files);
-        $iterator = new \ArrayIterator($zipFile);
+        $iterator = new \IteratorIterator($zipFile);
         $iterator->rewind();
 
         while ($iterator->valid()) {
