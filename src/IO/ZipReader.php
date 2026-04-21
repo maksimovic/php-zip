@@ -824,7 +824,10 @@ class ZipReader
             if ($skipCheckCrc) {
                 while ($offset < $limit) {
                     $length = min($chunkSize, $limit - $offset);
-                    $buffer = fread($this->inStream, $length);
+                    // @-suppress: a bad-password path can feed corrupt cipher-text into zlib.inflate,
+                    // which emits a PHP warning. We already handle the false return below; we don't
+                    // want PHPUnit's warning-to-exception converter intercepting before we get there.
+                    $buffer = @fread($this->inStream, $length);
 
                     if ($buffer === false) {
                         throw new ZipException(sprintf('Error reading the contents of entry "%s".', $entry->getName()));
@@ -841,7 +844,8 @@ class ZipReader
 
                 while ($offset < $limit) {
                     $length = min($chunkSize, $limit - $offset);
-                    $buffer = fread($this->inStream, $length);
+                    // See comment in the skipCheckCrc branch above.
+                    $buffer = @fread($this->inStream, $length);
 
                     if ($buffer === false) {
                         throw new ZipException(sprintf('Error reading the contents of entry "%s".', $entry->getName()));

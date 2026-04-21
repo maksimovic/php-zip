@@ -21,8 +21,6 @@ jobs:
                     - windows-latest
                     - macos-latest
                 php:
-                    - '7.4'
-                    - '8.0'
                     - '8.1'
                     - '8.2'
                     - '8.3'
@@ -52,13 +50,13 @@ jobs:
                 run:  brew install zip unzip p7zip
 
             -
-                name: Disable JIT for PHP 8 on Linux and Mac
-                if:   (matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest') && matrix.php != '7.4'
+                name: Disable JIT on Linux and Mac
+                if:   matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
                 run:  echo "PHP_INI=${PHP_INI}, opcache.jit=0, opcache.jit_buffer_size=0" >> "$GITHUB_ENV"
 
             -
-                name: Disable JIT for PHP 8 on Windows
-                if:   matrix.os == 'windows-latest' && matrix.php != '7.4'
+                name: Disable JIT on Windows
+                if:   matrix.os == 'windows-latest'
                 run:  echo "PHP_INI=$env:PHP_INI, opcache.jit=0, opcache.jit_buffer_size=0" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
             -
@@ -83,7 +81,7 @@ jobs:
 
             -
                 name: Set coverage args
-                if:   matrix.os == 'ubuntu-latest' && matrix.php == '7.4'
+                if:   matrix.os == 'ubuntu-latest' && matrix.php == '8.1'
                 run:  echo "PHPUNIT_COVERAGE=1" >> $GITHUB_ENV
 
             -
