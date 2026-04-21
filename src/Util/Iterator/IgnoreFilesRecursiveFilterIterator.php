@@ -69,6 +69,12 @@ class IgnoreFilesRecursiveFilterIterator extends \RecursiveFilterIterator
      */
     public function getChildren(): self
     {
-        return new self($this->getInnerIterator()->getChildren(), $this->ignoreFiles);
+        $inner = $this->getInnerIterator();
+
+        if ($inner === null) {
+            throw new \LogicException('Inner iterator not set');
+        }
+
+        return new self($inner->getChildren(), $this->ignoreFiles);
     }
 }

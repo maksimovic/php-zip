@@ -166,7 +166,7 @@ final class NtfsExtraField implements ZipExtraField
      */
     public function packLocalFileData(): string
     {
-        $packed = pack(
+        return \PhpZip\Util\PackUtil::packOrFail(
             'VvvPPP',
             0,
             self::TIME_ATTR_TAG,
@@ -175,12 +175,6 @@ final class NtfsExtraField implements ZipExtraField
             $this->accessNtfsTime,
             $this->createNtfsTime
         );
-
-        if ($packed === false) {
-            throw new ZipException('Failed to pack NTFS extra field data');
-        }
-
-        return $packed;
     }
 
     public function getModifyNtfsTime(): int

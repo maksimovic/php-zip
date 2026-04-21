@@ -52,6 +52,7 @@ final class PackUtil
     {
         $result = pack($format, ...$values);
 
+        /** @psalm-suppress TypeDoesNotContainType pack return type varies between psalm 8.1/8.5 stubs */
         if ($result === false) {
             throw new ZipException(sprintf('Failed to pack binary data with format "%s"', $format));
         }

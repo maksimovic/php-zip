@@ -398,6 +398,7 @@ class ZipWriter
     {
         $contextHash = hash_init('crc32b');
 
+        /** @psalm-suppress TypeDoesNotContainType hash_init return type varies between psalm 8.1/8.5 stubs */
         if ($contextHash === false) {
             throw new ZipException('Unable to init crc32b hash context');
         }

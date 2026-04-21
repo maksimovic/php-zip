@@ -83,6 +83,7 @@ class WinZipAesContext
         $sha1Mac = PackUtil::substrOrFail($hash, $keyStrengthBytes, $keyStrengthBytes);
         $hmacContext = hash_init('sha1', \HASH_HMAC, $sha1Mac);
 
+        /** @psalm-suppress TypeDoesNotContainType hash_init signature varies between php versions — psalm 8.1 stubs say the return is always HashContext, psalm 8.5 stubs say HashContext|false */
         if ($hmacContext === false) {
             throw new ZipException('Unable to init sha1 HMAC context');
         }
