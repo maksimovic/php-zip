@@ -32,7 +32,7 @@
         "ext-fileinfo": "*",
         "ext-xml": "*",
         "ext-dom": "*",
-        "guzzlehttp/psr7": "^1.6",
+        "guzzlehttp/psr7": "^1.6 || ^2.0",
         "phpunit/phpunit": "^9",
         "symfony/var-dumper": "*",
         "friendsofphp/php-cs-fixer": "^3.4.0",
